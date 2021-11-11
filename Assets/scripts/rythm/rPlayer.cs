@@ -8,14 +8,12 @@ public class rPlayer : rEntity
 
     //reference
     public static rPlayer Instance;
+    public GameObject myCam;
+    Camera cam;
     float PerfectTime;
     float HalfTime;
 
     //player status
-    [SerializeField]
-    private int maxHealth;
-    [SerializeField]
-    private int health;
 
     //inputs
     bool pressingAttack = false;
@@ -35,6 +33,7 @@ public class rPlayer : rEntity
     bool changingColor;
     bool clockWise;    
     float waitingForBeat = -1;
+    bool fbCheck;
 
     //beat counts
     bool fullBeatRunning;
@@ -52,11 +51,14 @@ public class rPlayer : rEntity
             return;
         }
         Instance = this;
+        myCam = Camera.main.gameObject;
+        cam = Camera.main;
     }
     protected override void OnEnable()
     {
         base.OnEnable();
         stopAllMovement();
+        invulTime = invulTime == 0? 1 : invulTime;
     }
     protected override void OnDisable()
     {
@@ -78,6 +80,7 @@ public class rPlayer : rEntity
 
         //has to be after the setup bc it can invoke movement
         setMoveFalse();
+        cam.fieldOfView += 1.5f;
 
     }
     protected override void halfBeat()
@@ -117,8 +120,8 @@ public class rPlayer : rEntity
 
         if (attacking && !Attacker.activeSelf) // first attacking frame
         {
-            Attacker.transform.position = attackPos;
-            Attacker.SetActive(true);
+            Debug.Log("activating attacker");
+            Attack(attackDir);
         }
         else if (Attacker.activeSelf) // second attacking frame
             attacking = false;
@@ -127,7 +130,7 @@ public class rPlayer : rEntity
         if (moving)
         {
             staticEigthMoveTo(beatPos, destination, mStep);
-            Debug.Log("moving from " + beatPos + " to " + destination);
+            //Debug.Log("moving from " + beatPos + " to " + destination);
         }
         mStep++;
 
@@ -222,7 +225,9 @@ public class rPlayer : rEntity
 
     private void FixedUpdate()
     {
-        
+        Vector3 camPos = new Vector3(beatPos.x, beatPos.y, myCam.transform.position.z);
+        myCam.transform.position = Vector3.Lerp(myCam.transform.position, camPos, Time.fixedDeltaTime);
+        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, 60f, Time.fixedDeltaTime * 2.5f);
     }
 
     #endregion
@@ -232,7 +237,7 @@ public class rPlayer : rEntity
     void Move() 
     {
 
-        Debug.Log("called move");
+        //Debug.Log("called move");
 
         float inputTime = pressingMove ? walkTime :
                           pressingAttack ? attackTime : changeTime;
@@ -249,7 +254,7 @@ public class rPlayer : rEntity
         {
             waitingForBeat = eigthBeatCount > 7 ? 1f :
                              eigthBeatCount > 6 ? 0f : -1f;
-            Debug.Log("post halfBeat, will be solved on beat: " + waitingForBeat);
+            //Debug.Log("post halfBeat, will be solved on beat: " + waitingForBeat);
             return;
         }
 
@@ -277,7 +282,7 @@ public class rPlayer : rEntity
 
             }
 
-            Debug.Log("moving at perfect time " + myMovement);
+            //Debug.Log("moving at perfect time " + myMovement);
             
 
         }
@@ -299,7 +304,7 @@ public class rPlayer : rEntity
                 moving = false;
 
             }
-            Debug.Log("moving at half time " + myMovement);
+            //Debug.Log("moving at half time " + myMovement);
         }
         else 
         {
@@ -330,7 +335,7 @@ public class rPlayer : rEntity
         //before beat input handler
         if (waitingForBeat >= 0)
         {
-            Debug.Log("solving move on beat");
+            //Debug.Log("solving move on beat");
             Move();
         }
 
@@ -351,6 +356,54 @@ public class rPlayer : rEntity
          * player input is decided on update which runs apart from input
          */
         #endregion
+
+    }
+
+    #endregion
+
+    #region combat related
+
+    public void GetHit(int damage, Color col) 
+    {
+
+        if (Time.time - timeLastHit < invulTime)
+            return;
+
+        //there will be different things for the color and stuff
+        health = Mathf.Clamp(health - damage, 0, maxHealth);
+        float mhFactor = Mathf.Pow((1f - ((float)health / maxHealth)), 2f);
+        cam.fieldOfView -= mhFactor * 20f;
+        //Debug.Log(" factor of " + mhFactor + " with health " + health);
+        timeLastHit = Time.time;
+
+    }
+
+    public override void Die()
+    {
+        
+    }
+
+    //not used
+    IEnumerator GetHitFeedBack() 
+    {
+
+        if (fbCheck)
+            yield break;
+
+        fbCheck = true;
+        cam.fieldOfView += 10;
+        Vector3 startpos = myCam.transform.position;
+        Vector3 endpos = myCam.transform.position + (Vector3.forward * 3);
+        for (int i = 0; i < 60; i++) 
+        {
+
+            //myCam.transform.position = Vector3.Lerp(endpos, startpos, i / 60f);
+            if (i % 6 == 0)
+                cam.fieldOfView--;
+            yield return new WaitForSeconds(1f / 120f);
+
+        }
+        fbCheck = false;
 
     }
 

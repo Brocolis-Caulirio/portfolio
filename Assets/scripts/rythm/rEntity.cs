@@ -10,12 +10,21 @@ public class rEntity : MonoBehaviour
     //references
     protected SpriteRenderer myRenderer;
     public GameObject Attacker;
+    protected rHitter attackerHitter;
     public Transform[] mySpheres;
     public Color[] MyColors;
     public Color currentColor;
     protected int cColorIndex;
     public int StartingColor;
     protected Rigidbody2D rb;
+
+    //statuses
+    [SerializeField]
+    protected int maxHealth;
+    [SerializeField]
+    protected int health;
+    [SerializeField]
+    public float invulTime = 1f;
 
     //constants
     [Space(25)]
@@ -35,7 +44,8 @@ public class rEntity : MonoBehaviour
     protected Vector3 beatPos;
     protected bool mClock;
     protected Vector2[][] rotationInfo = null;
-    
+    protected float timeLastHit;
+
 
     #region setup
     // ------------------------- // // ------------------------- //
@@ -59,8 +69,8 @@ public class rEntity : MonoBehaviour
             beatCheck();
             SetupColors();
         }
-
-        }
+        health = maxHealth;
+    }
     protected virtual void OnDisable() 
     {
         Debug.Log("removing beats at " + transform.name);
@@ -107,6 +117,7 @@ public class rEntity : MonoBehaviour
     // ------------------------- // // ------------------------- //
     protected virtual void checkValidInputs() 
     {
+        timeLastHit = Time.time;
         rotDuration = rotDuration <= 0 ? 1 : rotDuration;
         walkDist = walkDist <= 0 ? 1 : walkDist;
         minDist = minDist <= 0 ? 1 : minDist;
@@ -345,9 +356,9 @@ public class rEntity : MonoBehaviour
                 break;
             
             case movement.attack:
-                destination = transform.position + (
-                    (rPlayer.Instance.transform.position - transform.position).normalized 
-                    * walkDist);
+                Vector3 dest = (rPlayer.Instance.transform.position - transform.position).normalized;
+                dest = new Vector3(Mathf.Round(dest.x), Mathf.Round(dest.y), dest.z);
+                destination = transform.position + (dest * walkDist);
                 break;
 
             default:
@@ -368,11 +379,7 @@ public class rEntity : MonoBehaviour
 
             if (theStep <= 2)
             {
-
-                Attacker.transform.position = destination;
-                Attacker.transform.snapToGrid(true);
-                Attacker.SetActive(true);
-
+                Attack(destination);
             }
             else
                 Attacker.SetActive(false);
@@ -447,8 +454,57 @@ public class rEntity : MonoBehaviour
         return decision;
 
     }
-    
+
     // ------------------------- // // ------------------------- //
+    #endregion
+
+    #region combat related
+
+    protected virtual void Attack(Vector3 destination) 
+    {
+
+        if (attackerHitter == null)
+            attackerHitter = Attacker.GetComponent<rHitter>();
+        attackerHitter.myColor = currentColor;
+        Attacker.transform.position = destination;
+        Attacker.transform.snapToGrid(true);
+        Attacker.SetActive(true);
+    }
+    protected virtual void Attack(movement dest) 
+    {
+
+        if (attackerHitter == null)
+            attackerHitter = Attacker.GetComponent<rHitter>();
+        Vector3 destination = transform.position + dest.movementToVec3();
+        attackerHitter.myColor = currentColor;
+        Attacker.transform.position = destination;
+        Attacker.transform.snapToGrid(true);
+        Attacker.SetActive(true);
+    }
+
+    public virtual void GetHit() 
+    {
+
+        if (Time.time - timeLastHit < invulTime)
+            return;
+
+        health = Mathf.Clamp(health--, 0, maxHealth);
+        timeLastHit = Time.time;
+        CheckDeath();
+
+    }
+
+    protected virtual void CheckDeath() 
+    {
+        if (health <= 0)
+            Die();
+    }
+
+    public virtual void Die() 
+    {
+        transform.gameObject.SetActive(false);
+    }
+
     #endregion
 
     protected void test(float testAngle)

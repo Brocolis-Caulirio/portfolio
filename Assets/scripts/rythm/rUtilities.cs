@@ -383,6 +383,10 @@ public static class rUtilities
     #region weirdly specific stuff
     // ------------------------- // // ------------------------- //
 
+    public static Color oneAlpha(this Color col)
+    {
+        return new Color(col.r, col.g, col.b, 1f);
+    }
     public static Vector3 movementToVec3(this rEntity.movement theMove)
     {
 

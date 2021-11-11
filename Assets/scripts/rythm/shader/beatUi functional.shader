@@ -102,8 +102,8 @@ Shader "Unlit/beatUi functional"
                 float2 newUv = IN.texcoord;
                 newUv.x = abs((newUv.x * 2.) - 1.);
                 float nMX = newUv.x;
-                newUv.x = frac(newUv.x + _Bpm);
-                //newUv.y = (newUv.y / (nMX + .25)) ;// / 2 + .5;
+                newUv.x = frac(newUv.x + (_Bpm * _Time.y));
+                newUv.y = (newUv.y / max(.3, nMX)) ;// / 2 + .5;
 
                 //float wave = max(0.5, sin(frac(_Bpm)));
                 half4 color = (tex2D(_MainTex, newUv) + _TextureSampleAdd) * IN.color;

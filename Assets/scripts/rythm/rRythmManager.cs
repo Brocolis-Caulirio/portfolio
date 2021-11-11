@@ -263,7 +263,7 @@ public class rRythmManager : MonoBehaviour
         if (myUi != null) 
         {
             for (int i = 0; i < myUi.Length; i++)
-                myUi[i].SetFloat("_Bpm", goalTime);
+                myUi[i].SetFloat("_Bpm", beatDelay);
         }
         #endregion
 
