@@ -24,6 +24,7 @@ float4 debugKRGBW(float val, float low, float up)
 
 }
 
+//weird toons
 float toon(float3 input, float ToonShades)
 {
     input *= ToonShades/2.;
@@ -36,7 +37,6 @@ float toon(float3 input, float ToonShades)
 
     return input;
 }
-
 float toonShadow(float3 input, float ToonShades)
 {
     input *= ToonShades/2.;
@@ -53,6 +53,81 @@ float toonShadow(float3 input, float ToonShades)
     input = (difInt + difFrac) / (ToonShades/2);    
 
     return input;
+}
+
+//good toons
+float2 fwidthLU(float i)
+{
+    float lower = i - fwidth(i) / 2;
+    float upper = i + fwidth(i) / 2;
+    return float2(lower, upper);
+}
+float pencilToon(float i, int count)
+{
+
+    if (count <= 1)
+        return floor(i);
+
+    //return floor(i * count) / count;
+
+    float mul = floor(i * count) / count;
+    float check = (fwidth(mul) > 1 / count);
+    float icheck = (check - 1) * -1;
+    float2 lu = fwidthLU(mul);
+    //only works bc all values are unchanging until they change
+    //in essence it only makes a 2x2 pixel transition line instead of immediate transition
+
+    mul = (check * invLerp(lu.x, lu.y, i)) + (icheck * mul);
+    return mul;
+
+}
+float smoothToon(float i, float count)
+{
+
+    if (count <= 1)
+        return floor(i);
+    //return floor(i * count) / count;
+    float MD = .125;
+
+    float edge = count;
+    float mul = floor(i * count);
+
+    float Frac = frac(i * count);
+    float q = 1. / count;
+
+    if (Frac < MD)
+        mul = lerp(mul - q, mul, Frac / MD);
+    if (Frac > 1 - MD)
+        mul = lerp(mul + q, mul, (1 - Frac) / MD);
+
+    mul = mul / count;
+
+    return mul + (Frac / 10);
+
+}
+float smoothToon(float i, float count, float mergeDist)
+{
+
+    if (count <= 1 || (mergeDist > .5 || mergeDist < 0))
+        return floor(i);
+    //return floor(i * count) / count;
+    float MD = mergeDist;
+
+    float edge = count;
+    float mul = floor(i * count);
+
+    float Frac = frac(i * count);
+    float q = 1. / count;
+
+    if (MD>0 && Frac < MD)
+        mul = lerp(mul - q, mul, Frac / MD);
+    if (MD>0 && Frac > 1 - MD)
+        mul = lerp(mul + q, mul, (1 - Frac) / MD);
+
+    mul = mul / count;
+
+    return mul + (Frac / 10);
+
 }
 
 float3x3 TBN_maker(float3 tangent, float3 bitangent, float3 normal)
